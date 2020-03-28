@@ -1,5 +1,12 @@
-// The following code snippit gets the process name (w/ absolute path)
-// of the windows process that currently has focus.  
+// prints exe name for both active and foreground windows.
+// please be sure to understand the differences between active and foreground
+// windows in Mircosoft windows. 
+//
+// https://stackoverflow.com/questions/3940346/foreground-vs-active-window
+//
+// In summary: Any window system wide can be the foreground window.  
+// but a call to GetActiveWindow() will return NULL if another process is the
+// foreground window...
 
 using System;
 using System.Collections.Generic;
@@ -17,6 +24,9 @@ namespace proc_name_cs
 
         [DllImport("user32.dll")]
         static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll")]
+        static extern IntPtr GetActiveWindow();
 
         [DllImport("user32.dll")]
         static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
@@ -56,10 +66,12 @@ namespace proc_name_cs
             [In] [MarshalAs(UnmanagedType.U4)] int nSize
         );
 
-        public static string GetActiveWindowFileName()
+        public static string getExeName(IntPtr window_handle)
         {
+            if (window_handle.ToInt64() == 0)
+                return "NULL";
+
             const int max_path = 260;
-            IntPtr window_handle;
             IntPtr process_handle;
             uint gpid_return_value;
             uint proc_name_return_value;
@@ -67,9 +79,7 @@ namespace proc_name_cs
             StringBuilder file_name_buffer = new StringBuilder(max_path);
             file_name_buffer.Insert(0, "unknown");
 
-            window_handle = GetForegroundWindow();
             gpid_return_value = GetWindowThreadProcessId(window_handle, out focused_pid);
-
             process_handle = OpenProcess( 
                 ProcessAccessFlags.QueryInformation| ProcessAccessFlags.VirtualMemoryRead 
                 ,false
@@ -86,8 +96,8 @@ namespace proc_name_cs
 
         static void Main(string[] args)
         {
-            string active_window = GetActiveWindowFileName();
-            Console.WriteLine(active_window);
+            Console.WriteLine("Foreground window is: {0}", getExeName(GetForegroundWindow()));
+            Console.WriteLine("Active window is: {0}", getExeName(GetActiveWindow()));
         }
     }
 }
